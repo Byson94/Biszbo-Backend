@@ -1,0 +1,25 @@
+{
+  "name": "biszbo-backend",
+  "version": "1.0.0",
+  "description": "Authenticator system of biszbo chat app.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Biszbo",
+    "Chat",
+    "Authenticator"
+  ],
+  "author": "Byson94",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "mongodb": "^6.16.0",
+    "mongoose": "^8.14.0"
+  }
+}
