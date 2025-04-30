@@ -3,7 +3,6 @@
 ////////////////////////////////
 
 const express = require("express");
-const { createClient } = require("@supabase/supabase-js");
 const cors = require("cors");
 const mongoose = require("mongoose");
 require("dotenv").config();
@@ -25,77 +24,7 @@ app.listen(PORT, () => {
   console.log("Server Listening on PORT:", PORT);
 });
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 const mongodbUrl = process.env.MONGODB_URL;
-
-/////////////////////////////
-//     AUTHENTICATION      //
-/////////////////////////////
-
-app.post("/register", async (request, response) => {
-  const { email, password } = request.body;
-
-  const { user, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (error) {
-    return response.status(400).json({ error: error.message });
-  }
-
-  response.status(200).json({ user });
-});
-
-app.post("/login", async (request, response) => {
-  const { email, password } = request.body;
-
-  const { user, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    return response.status(400).json({ error: error.message });
-  }
-
-  response.status(200).json({ user });
-});
-
-app.get("/check-auth", async (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-
-  if (!token) {
-    return res.status(401).json({ message: "No token provided" });
-  }
-
-  const { data, error } = await supabase.auth.api.getUser(token);
-
-  if (error || !data) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  res.status(200).json({ uid: data.id });
-});
-
-app.get("/getsession", async (req, res) => {
-  const { data, error } = await supabase.auth.getSession();
-
-  if (error) {
-    return res.status(400).json({ error: error.message });
-  }
-
-  const { session, user } = data;
-
-  if (!session) {
-    return res.status(401).json({ error: "User not authenticated" });
-  }
-
-  res.status(200).json({ session });
-});
 
 //////////////////////////////
 //     MESSAGE STORAGE      //
@@ -147,6 +76,39 @@ app.post("/addMessage", async (req, res) => {
   }
 });
 
+app.post("/getAllMessages", async (req, res) => {
+  const { contentID } = req.body;
+
+  if (!contentID || typeof contentID !== "string") {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid or missing contentID" });
+  }
+
+  try {
+    const existingMessage = await Message.findOne({ contentID });
+
+    if (!existingMessage) {
+      return res.status(404).json({
+        success: false,
+        message: "No messages found for this contentID",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      messageCount: existingMessage.messages.length,
+      messages: existingMessage.messages,
+    });
+  } catch (error) {
+    console.error("Error retrieving messages:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching messages",
+    });
+  }
+});
+
 app.post("/createSchema", async (req, res) => {
   const { contentID, messages } = req.body;
 
@@ -172,81 +134,4 @@ app.post("/createSchema", async (req, res) => {
     console.error("Error creating schema:", error);
     return res.status(500).json({ message: "Error creating schema" });
   }
-});
-
-////////////////////////////////
-//          Contacts          //
-////////////////////////////////
-
-app.post("/addToContact", async (req, res) => {
-  const { userA, userB } = req.body;
-
-  const { data, error: selectError } = await supabase
-    .from("Contacts")
-    .select("*")
-    .eq("uuid", userA)
-    .single();
-
-  if (selectError && selectError.code !== "PGRST116") {
-    return res.status(500).json({ error: selectError.message });
-  }
-
-  let updatedContacts;
-
-  if (data) {
-    const currentContacts = data.contacts || [];
-    if (!currentContacts.includes(userB)) {
-      updatedContacts = [...currentContacts, userB];
-      const { data: verify, error: updateError } = await supabase
-        .from("Contacts")
-        .update({ contacts: updatedContacts })
-        .eq("uuid", userA)
-        .select();
-
-      if (updateError) {
-        return res.status(400).json({ error: updateError.message });
-      }
-    }
-  } else {
-    updatedContacts = [userB];
-    const { error: insertError } = await supabase
-      .from("Contacts")
-      .insert({ uuid: userA, contacts: updatedContacts });
-
-    if (insertError) {
-      return res.status(400).json({ error: insertError.message });
-    }
-  }
-
-  return res.status(200).json({ success: true });
-});
-
-app.post("/removeFromContact", async (req, res) => {
-  const { userA, userB } = req.body;
-
-  const { data, error: selectError } = await supabase
-    .from("Contacts")
-    .select("contacts")
-    .eq("uuid", userA)
-    .single();
-
-  if (selectError || !data) {
-    return res.status(400).json({ error: "User not found or fetch failed" });
-  }
-
-  const currentContacts = data.contacts || [];
-  const updatedContacts = currentContacts.filter(
-    (contact) => contact !== userB
-  );
-
-  const { error: updateError } = await supabase
-    .from("Contacts")
-    .update({ contacts: updatedContacts })
-    .eq("uuid", userA);
-
-  if (updateError) {
-    return res.status(400).json({ error: updateError.message });
-  }
-
-  return res.status(200).json({ success: true });
 });
