@@ -12,7 +12,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://byson94.github.io/Biszbo/",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
