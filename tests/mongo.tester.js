@@ -49,9 +49,5 @@ if (debug.add) {
     }
   };
 
-  add(
-    "HEY THERE!",
-    2139801323801928213301923801,
-    "jasklfdjls3adfjlaksjdfkl213"
-  );
+  add("HEY THERE!", 2139801323801928213301923801, "234234fsdfsdfsdfdsf");
 }

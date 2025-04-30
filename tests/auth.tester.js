@@ -48,5 +48,5 @@ if (debug.login === true) {
     }
   };
 
-  login("devsbyson@gmail.com", "securepassword");
+  login("test@example.com", "securepassword");
 }

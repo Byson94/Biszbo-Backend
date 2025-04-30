@@ -173,3 +173,80 @@ app.post("/createSchema", async (req, res) => {
     return res.status(500).json({ message: "Error creating schema" });
   }
 });
+
+////////////////////////////////
+//          Contacts          //
+////////////////////////////////
+
+app.post("/addToContact", async (req, res) => {
+  const { userA, userB } = req.body;
+
+  const { data, error: selectError } = await supabase
+    .from("Contacts")
+    .select("*")
+    .eq("uuid", userA)
+    .single();
+
+  if (selectError && selectError.code !== "PGRST116") {
+    return res.status(500).json({ error: selectError.message });
+  }
+
+  let updatedContacts;
+
+  if (data) {
+    const currentContacts = data.contacts || [];
+    if (!currentContacts.includes(userB)) {
+      updatedContacts = [...currentContacts, userB];
+      const { data: verify, error: updateError } = await supabase
+        .from("Contacts")
+        .update({ contacts: updatedContacts })
+        .eq("uuid", userA)
+        .select();
+
+      if (updateError) {
+        return res.status(400).json({ error: updateError.message });
+      }
+    }
+  } else {
+    updatedContacts = [userB];
+    const { error: insertError } = await supabase
+      .from("Contacts")
+      .insert({ uuid: userA, contacts: updatedContacts });
+
+    if (insertError) {
+      return res.status(400).json({ error: insertError.message });
+    }
+  }
+
+  return res.status(200).json({ success: true });
+});
+
+app.post("/removeFromContact", async (req, res) => {
+  const { userA, userB } = req.body;
+
+  const { data, error: selectError } = await supabase
+    .from("Contacts")
+    .select("contacts")
+    .eq("uuid", userA)
+    .single();
+
+  if (selectError || !data) {
+    return res.status(400).json({ error: "User not found or fetch failed" });
+  }
+
+  const currentContacts = data.contacts || [];
+  const updatedContacts = currentContacts.filter(
+    (contact) => contact !== userB
+  );
+
+  const { error: updateError } = await supabase
+    .from("Contacts")
+    .update({ contacts: updatedContacts })
+    .eq("uuid", userA);
+
+  if (updateError) {
+    return res.status(400).json({ error: updateError.message });
+  }
+
+  return res.status(200).json({ success: true });
+});
