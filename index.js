@@ -10,9 +10,11 @@ require("dotenv").config();
 const app = express();
 app.use(express.json());
 
+const allowedOrigins = ["http://localhost:5173", "https://byson94.github.io"];
+
 app.use(
   cors({
-    origin: "https://byson94.github.io/Biszbo/",
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
