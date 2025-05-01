@@ -14,7 +14,7 @@ app.use(express.json());
 const allowedOrigins = [
   "http://localhost:5173",
   "https://byson94.github.io",
-  "https://biszbo.onrender.com/",
+  "https://biszbo.onrender.com",
 ];
 
 const supabaseAdmin = createClient(
@@ -233,7 +233,6 @@ app.post("/contacts/remove", async (req, res) => {
   }
 });
 
-// GET /contacts/:userId
 app.get("/contacts/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
