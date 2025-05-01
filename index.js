@@ -5,12 +5,22 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-require("dotenv").config();
+const { createClient } = require("@supabase/supabase-js");
+// require("dotenv").config();
 
 const app = express();
 app.use(express.json());
 
-const allowedOrigins = ["http://localhost:5173", "https://byson94.github.io", "https://biszbo.onrender.com/"];
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://byson94.github.io",
+  "https://biszbo.onrender.com/",
+];
+
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 app.use(
   cors({
@@ -135,5 +145,107 @@ app.post("/createSchema", async (req, res) => {
   } catch (error) {
     console.error("Error creating schema:", error);
     return res.status(500).json({ message: "Error creating schema" });
+  }
+});
+
+/////////////////////////
+//      CONTACTS       //
+/////////////////////////
+
+async function updateContacts(uuid, newContact) {
+  const { data, error: selectError } = await supabaseAdmin
+    .from("Contacts")
+    .select("contacts")
+    .eq("uuid", uuid)
+    .single();
+
+  if (selectError && selectError.code !== "PGRST116")
+    throw new Error(selectError.message);
+
+  let updatedContacts;
+  if (data) {
+    const currentContacts = data.contacts || [];
+    if (!currentContacts.includes(newContact)) {
+      updatedContacts = [...currentContacts, newContact];
+      if (currentContacts.length < 50) {
+        const { error: updateError } = await supabaseAdmin
+          .from("Contacts")
+          .update({ contacts: updatedContacts })
+          .eq("uuid", uuid);
+        if (updateError) throw new Error(updateError.message);
+      } else {
+        throw new Error("50 contact limit REACHED!");
+      }
+    }
+  } else {
+    updatedContacts = [newContact];
+    const { error: insertError } = await supabaseAdmin
+      .from("Contacts")
+      .insert({ uuid, contacts: updatedContacts });
+    if (insertError) throw new Error(insertError.message);
+  }
+}
+
+app.post("/contacts/add", async (req, res) => {
+  const { userA, userB } = req.body;
+  if (!userA || !userB)
+    return res.status(400).json({ error: "Missing user IDs" });
+
+  try {
+    await Promise.all([
+      updateContacts(userA, userB),
+      updateContacts(userB, userA),
+    ]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/contacts/remove", async (req, res) => {
+  const { userA, userB } = req.body;
+  if (!userA || !userB)
+    return res.status(400).json({ error: "Missing user IDs" });
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("Contacts")
+      .select("contacts")
+      .eq("uuid", userA)
+      .single();
+
+    if (error || !data) throw new Error("User not found or fetch failed");
+
+    const updatedContacts = (data.contacts || []).filter(
+      (contact) => contact !== userB
+    );
+
+    const { error: updateError } = await supabaseAdmin
+      .from("Contacts")
+      .update({ contacts: updatedContacts })
+      .eq("uuid", userA);
+
+    if (updateError) throw new Error(updateError.message);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /contacts/:userId
+app.get("/contacts/:userId", async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("Contacts")
+      .select("contacts")
+      .eq("uuid", userId)
+      .single();
+
+    if (error) throw new Error(error.message);
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
