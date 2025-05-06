@@ -68,7 +68,7 @@ const verifySupabaseToken = async (req, res, next) => {
   }
 
   try {
-    const { data, error } = await supabaseAdmin.auth.api.getUser(token);
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error) {
       return res.status(401).json({ message: "Invalid or expired token" });
