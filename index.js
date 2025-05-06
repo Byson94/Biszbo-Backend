@@ -78,7 +78,7 @@ const verifySupabaseToken = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("Error verifying token:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: `Internal server error: ${error}` });
   }
 };
 
