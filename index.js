@@ -60,7 +60,29 @@ const messageSchema = new mongoose.Schema({
 
 const Message = mongoose.model("Message", messageSchema);
 
-app.post("/addMessage", async (req, res) => {
+const verifySupabaseToken = async (req, res, next) => {
+  const token = req.headers["authorization"]?.split(" ")[1];
+
+  if (!token) {
+    return res.status(403).json({ message: "Token missing or invalid" });
+  }
+
+  try {
+    const { data, error } = await supabase.auth.api.getUser(token);
+
+    if (error) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
+    req.user = data;
+    next();
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+app.post("/addMessage", verifySupabaseToken, async (req, res) => {
   const { message, UID, contentID } = req.body;
 
   try {
@@ -88,7 +110,7 @@ app.post("/addMessage", async (req, res) => {
   }
 });
 
-app.post("/getAllMessages", async (req, res) => {
+app.post("/getAllMessages", verifySupabaseToken, async (req, res) => {
   const { contentID } = req.body;
 
   if (!contentID || typeof contentID !== "string") {
@@ -121,7 +143,7 @@ app.post("/getAllMessages", async (req, res) => {
   }
 });
 
-app.post("/createSchema", async (req, res) => {
+app.post("/createSchema", verifySupabaseToken, async (req, res) => {
   const { contentID, messages } = req.body;
 
   try {
